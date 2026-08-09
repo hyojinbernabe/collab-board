@@ -122,3 +122,31 @@ describe("moveCard", () => {
     expect(readBoard(a)).toEqual(readBoard(b));
   });
 });
+
+describe("merging", () => {
+  it("orders cards added at the same spot the same way on both sides", () => {
+    const a = newBoard();
+    const b = new Y.Doc();
+    syncDocs(a, b);
+
+    addCard(a, "todo", "from a");
+    addCard(b, "todo", "from b");
+    syncDocs(a, b);
+
+    expect(cardTexts(a, "todo")).toHaveLength(2);
+    expect(readBoard(a)).toEqual(readBoard(b));
+  });
+
+  it("keeps both field changes when one person edits text and another changes color", () => {
+    const a = newBoard();
+    const id = addCard(a, "todo", "old");
+    const b = new Y.Doc();
+    syncDocs(a, b);
+
+    updateCardText(a, id, "new");
+    setCardColor(b, id, "green");
+    syncDocs(a, b);
+
+    expect(readBoard(b).columns[0].cards[0]).toMatchObject({ text: "new", color: "green" });
+  });
+});

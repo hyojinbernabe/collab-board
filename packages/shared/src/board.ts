@@ -107,8 +107,10 @@ export function moveCard(doc: Y.Doc, cardId: string, toColumnId: string, toIndex
   });
 }
 
-function byPosition(a: { position: number }, b: { position: number }) {
-  return a.position - b.position;
+// equal positions can happen when two people add a card at the same time,
+// so ties are broken by id to keep the order the same on every client
+function byPosition(a: { id: string; position: number }, b: { id: string; position: number }) {
+  return a.position - b.position || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 }
 
 export function readBoard(doc: Y.Doc): BoardState {
