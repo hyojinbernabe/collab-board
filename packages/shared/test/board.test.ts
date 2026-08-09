@@ -107,4 +107,18 @@ describe("moveCard", () => {
     expect(cardTexts(doc, "done")).toEqual(["x", "y"]);
   });
 
+  it("keeps a single copy when two clients move the same card at once", () => {
+    const a = newBoard();
+    const id = addCard(a, "todo", "contested");
+    const b = new Y.Doc();
+    syncDocs(a, b);
+
+    moveCard(a, id, "doing", 0);
+    moveCard(b, id, "done", 0);
+    syncDocs(a, b);
+
+    const everyCard = readBoard(a).columns.flatMap((c) => c.cards);
+    expect(everyCard).toHaveLength(1);
+    expect(readBoard(a)).toEqual(readBoard(b));
+  });
 });
