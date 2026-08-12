@@ -111,4 +111,12 @@ describe("sync server", () => {
     await waitFor(() => !bob.provider.awareness.getStates().has(aliceId));
   });
 
+  it("rejects a bad board id", async () => {
+    await start();
+    const socket = new WebSocket(`ws://localhost:${server!.port}/${"x".repeat(100)}`);
+    const code = await new Promise<number>((resolve) => {
+      socket.addEventListener("close", (event) => resolve(event.code));
+    });
+    expect(code).toBe(1008);
+  });
 });

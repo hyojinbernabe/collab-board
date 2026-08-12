@@ -58,7 +58,14 @@ export async function startSyncServer({ store, port = 1234 }: SyncServerOptions)
     // messages can arrive while the board is still loading from the store
     const early: Uint8Array[] = [];
 
-    const handle = (message: Uint8Array) => room!.handleMessage(socket, message);
+    const handle = (message: Uint8Array) => {
+      try {
+        room!.handleMessage(socket, message);
+      } catch (error) {
+        console.error(`bad message on board ${boardId}`, error);
+        socket.close(1003, "bad message");
+      }
+    };
 
     socket.on("message", (data: ArrayBuffer) => {
       const message = new Uint8Array(data);
