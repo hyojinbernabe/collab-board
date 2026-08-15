@@ -6,15 +6,15 @@ export interface Queryable {
   query<Row>(text: string, params?: unknown[]): Promise<{ rows: Row[] }>;
 }
 
-const schema = `
-  create table if not exists board_updates (
+const schema = [
+  `create table if not exists board_updates (
     id bigserial primary key,
     board_id text not null,
     data bytea not null,
     created_at timestamptz not null default now()
-  );
-  create index if not exists board_updates_board_id_idx on board_updates (board_id, id);
-`;
+  )`,
+  "create index if not exists board_updates_board_id_idx on board_updates (board_id, id)",
+];
 
 export class PostgresStore implements UpdateStore {
   constructor(
@@ -30,7 +30,7 @@ export class PostgresStore implements UpdateStore {
   }
 
   async migrate() {
-    await this.db.query(schema);
+    for (const statement of schema) await this.db.query(statement);
   }
 
   async load(boardId: string) {
