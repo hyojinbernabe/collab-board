@@ -15,8 +15,8 @@ import { closeClient, connectClient, sleep, waitFor, waitForSync, type TestClien
 let server: SyncServer | undefined;
 let clients: TestClient[] = [];
 
-async function start(store = new MemoryStore()) {
-  server = await startSyncServer({ store, port: 0 });
+async function start(store = new MemoryStore(), compactEvery?: number) {
+  server = await startSyncServer({ store, port: 0, compactEvery });
   return server;
 }
 
@@ -96,6 +96,36 @@ describe("sync server", () => {
     const [lateOnA] = await connect("board-a", 1);
     await waitFor(() => cardCount(lateOnA) === 1);
     expect(readBoard(onB.doc).columns).toHaveLength(0);
+  });
+
+  it("loads a board back from the store after a restart", async () => {
+    const store = new MemoryStore();
+    await start(store);
+    const [alice] = await connect("saved", 1);
+    ensureDefaultColumns(alice.doc);
+    addCard(alice.doc, "doing", "survives restart");
+    await sleep(100);
+    await server!.close();
+
+    await start(store);
+    const [later] = await connect("saved", 1);
+    expect(readBoard(later.doc).columns[1].cards.map((c) => c.text)).toEqual(["survives restart"]);
+  });
+
+  it("compacts stored updates into a snapshot", async () => {
+    const store = new MemoryStore();
+    await start(store, 10);
+    const [alice] = await connect("busy", 1);
+    ensureDefaultColumns(alice.doc);
+    for (let i = 0; i < 25; i++) addCard(alice.doc, "todo", `card ${i}`);
+    await sleep(200);
+
+    const rows = await store.load("busy");
+    expect(rows.length).toBeLessThan(10);
+
+    const [bob] = await connect("busy", 1);
+    expect(cardCount(bob)).toBe(25);
+    expect(readBoard(bob.doc).columns[0].cards.at(-1)?.text).toBe("card 24");
   });
 
   it("shares cursors and drops them when a client leaves", async () => {

@@ -7,6 +7,8 @@ import type { UpdateStore } from "./store.js";
 export interface SyncServerOptions {
   store: UpdateStore;
   port?: number;
+  // how many updates to append before merging them into one snapshot
+  compactEvery?: number;
 }
 
 export interface SyncServer {
@@ -16,13 +18,19 @@ export interface SyncServer {
 
 const BOARD_ID = /^[\w-]{1,64}$/;
 
-export async function startSyncServer({ store, port = 1234 }: SyncServerOptions): Promise<SyncServer> {
+export async function startSyncServer({
+  store,
+  port = 1234,
+  compactEvery = 50,
+}: SyncServerOptions): Promise<SyncServer> {
   const rooms = new Map<string, Promise<Room>>();
+  // a board that is still saving after its last user left. reopening it waits for that.
+  const closing = new Map<string, Promise<void>>();
 
   function openRoom(boardId: string): Promise<Room> {
     let room = rooms.get(boardId);
     if (!room) {
-      room = Room.load(boardId, store);
+      room = (closing.get(boardId) ?? Promise.resolve()).then(() => Room.load(boardId, store, compactEvery));
       rooms.set(boardId, room);
       room.catch(() => rooms.delete(boardId));
     }
@@ -30,9 +38,10 @@ export async function startSyncServer({ store, port = 1234 }: SyncServerOptions)
   }
 
   function closeRoomIfEmpty(room: Room) {
-    if (room.connectionCount > 0) return;
+    if (room.connectionCount > 0 || closing.has(room.boardId)) return;
     rooms.delete(room.boardId);
-    void room.close();
+    const done = room.close().finally(() => closing.delete(room.boardId));
+    closing.set(room.boardId, done);
   }
 
   const httpServer = http.createServer((request, response) => {
@@ -102,7 +111,10 @@ export async function startSyncServer({ store, port = 1234 }: SyncServerOptions)
       for (const socket of wss.clients) socket.terminate();
       const open = await Promise.allSettled(rooms.values());
       rooms.clear();
-      await Promise.all(open.map((result) => (result.status === "fulfilled" ? result.value.close() : undefined)));
+      await Promise.all([
+        ...closing.values(),
+        ...open.map((result) => (result.status === "fulfilled" ? result.value.close() : undefined)),
+      ]);
       await new Promise((resolve) => wss.close(resolve));
       await new Promise((resolve) => httpServer.close(resolve));
     },

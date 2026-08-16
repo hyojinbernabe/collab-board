@@ -17,22 +17,25 @@ export class Room {
   // each socket and the awareness client ids it owns, so we can clear them when it leaves
   private connections = new Map<WebSocket, Set<number>>();
   private writes: Promise<void> = Promise.resolve();
+  private updatesSinceSnapshot = 0;
   private closed?: Promise<void>;
 
   private constructor(
     readonly boardId: string,
     private store: UpdateStore,
+    private compactEvery: number,
   ) {
     // the server has no cursor of its own
     this.awareness.setLocalState(null);
   }
 
-  static async load(boardId: string, store: UpdateStore): Promise<Room> {
-    const room = new Room(boardId, store);
+  static async load(boardId: string, store: UpdateStore, compactEvery: number): Promise<Room> {
+    const room = new Room(boardId, store, compactEvery);
     const updates = await store.load(boardId);
     Y.transact(room.doc, () => {
       for (const update of updates) Y.applyUpdate(room.doc, update);
     });
+    room.updatesSinceSnapshot = updates.length;
     // listen after loading so stored updates don't get written back
     room.doc.on("update", room.onDocUpdate);
     room.awareness.on("update", room.onAwarenessUpdate);
@@ -88,6 +91,7 @@ export class Room {
 
   private async saveAndDestroy() {
     this.doc.off("update", this.onDocUpdate);
+    if (this.updatesSinceSnapshot > 1) this.compact();
     await this.writes;
     this.awareness.destroy();
     this.doc.destroy();
@@ -103,6 +107,8 @@ export class Room {
     }
 
     this.queueWrite(() => this.store.append(this.boardId, update));
+    this.updatesSinceSnapshot++;
+    if (this.updatesSinceSnapshot >= this.compactEvery) this.compact();
   };
 
   private onAwarenessUpdate = (
@@ -117,6 +123,15 @@ export class Room {
     const message = awarenessMessage(this.awareness, [...added, ...updated, ...removed]);
     for (const socket of this.connections.keys()) send(socket, message);
   };
+
+  // the snapshot is taken now, but written in queue order. every update that came
+  // before it is already in the snapshot, and every update after it is appended
+  // after the snapshot lands, so nothing gets lost.
+  private compact() {
+    const snapshot = Y.encodeStateAsUpdate(this.doc);
+    this.updatesSinceSnapshot = 1;
+    this.queueWrite(() => this.store.replaceAll(this.boardId, snapshot));
+  }
 
   private queueWrite(write: () => Promise<void>) {
     this.writes = this.writes.then(write).catch((error) => {
