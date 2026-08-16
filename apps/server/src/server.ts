@@ -17,6 +17,7 @@ export interface SyncServer {
 }
 
 const BOARD_ID = /^[\w-]{1,64}$/;
+const PING_INTERVAL_MS = 30_000;
 
 export async function startSyncServer({
   store,
@@ -82,7 +83,16 @@ export async function startSyncServer({
       else early.push(message);
     });
 
+    let alive = true;
+    socket.on("pong", () => (alive = true));
+    const ping = setInterval(() => {
+      if (!alive) return socket.terminate();
+      alive = false;
+      socket.ping();
+    }, PING_INTERVAL_MS);
+
     socket.on("close", () => {
+      clearInterval(ping);
       if (!room) return;
       room.removeConnection(socket);
       closeRoomIfEmpty(room);
