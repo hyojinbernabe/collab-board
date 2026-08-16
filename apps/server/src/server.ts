@@ -22,7 +22,7 @@ const PING_INTERVAL_MS = 30_000;
 export async function startSyncServer({
   store,
   port = 1234,
-  compactEvery = 50,
+  compactEvery = 100,
 }: SyncServerOptions): Promise<SyncServer> {
   const rooms = new Map<string, Promise<Room>>();
   // a board that is still saving after its last user left. reopening it waits for that.
