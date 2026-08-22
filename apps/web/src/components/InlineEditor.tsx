@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 
 interface Props {
   initialValue?: string;
@@ -13,13 +13,18 @@ interface Props {
 // enter saves, shift+enter adds a line, escape cancels, clicking away saves
 export function InlineEditor({ initialValue = "", placeholder, multiline, className, onSubmit, onCancel }: Props) {
   const [value, setValue] = useState(initialValue);
+  // the browser fires blur when the editor is removed after enter, don't save twice
+  const finished = useRef(false);
+
   const finish = (save: boolean) => {
+    if (finished.current) return;
     const trimmed = value.trim();
     if (save && trimmed) {
-      if (onSubmit(trimmed)) setValue("");
+      if (onSubmit(trimmed)) return setValue("");
     } else {
       onCancel();
     }
+    finished.current = true;
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
