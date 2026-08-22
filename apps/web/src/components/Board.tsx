@@ -7,13 +7,20 @@ import { InlineEditor } from "./InlineEditor";
 
 export function Board({ doc }: { doc: Y.Doc }) {
   const board = useBoard(doc);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [addingColumn, setAddingColumn] = useState(false);
 
   return (
     <div className="board-scroll">
       <div className="board">
         {board.columns.map((column) => (
-          <ColumnView key={column.id} column={column} doc={doc} />
+          <ColumnView
+            key={column.id}
+            column={column}
+            doc={doc}
+            draggingId={draggingId}
+            setDraggingId={setDraggingId}
+          />
         ))}
 
         <div className="column column--ghost">

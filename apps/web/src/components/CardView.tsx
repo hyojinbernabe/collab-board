@@ -3,11 +3,29 @@ import { useState } from "react";
 import type * as Y from "yjs";
 import { InlineEditor } from "./InlineEditor";
 
-export function CardView({ card, doc }: { card: Card; doc: Y.Doc }) {
+interface Props {
+  card: Card;
+  doc: Y.Doc;
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}
+
+export function CardView({ card, doc, dragging, onDragStart, onDragEnd }: Props) {
   const [editing, setEditing] = useState(false);
 
   return (
-    <article className={`card card--${card.color}`}>
+    <article
+      className={`card card--${card.color} ${dragging ? "card--dragging" : ""}`}
+      data-card-id={card.id}
+      draggable={!editing}
+      onDragStart={(event) => {
+        event.dataTransfer.setData("text/plain", card.id);
+        event.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+    >
       {editing ? (
         <InlineEditor
           multiline
