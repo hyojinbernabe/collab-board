@@ -338,3 +338,25 @@ a {
 .card__editor {
   background: rgba(255, 255, 255, 0.7);
 }
+
+/* other people's cursors */
+
+.cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  transition: transform 80ms linear;
+  z-index: 10;
+}
+
+.cursor__name {
+  position: absolute;
+  top: 18px;
+  left: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+}
