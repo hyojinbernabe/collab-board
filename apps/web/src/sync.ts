@@ -1,9 +1,12 @@
 import { ensureDefaultColumns, readBoard, type BoardState } from "@collab-board/shared";
 import { useEffect, useState } from "react";
+import { IndexeddbPersistence } from "y-indexeddb";
 import type { Awareness } from "y-protocols/awareness";
 import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import type { LocalUser } from "./user";
+
+export type ConnectionStatus = "connecting" | "online" | "offline";
 
 export interface BoardConnection {
   doc: Y.Doc;
@@ -22,11 +25,22 @@ const SYNC_URL =
 
 export function useBoardConnection(boardId: string) {
   const [connection, setConnection] = useState<BoardConnection | null>(null);
+  const [status, setStatus] = useState<ConnectionStatus>("connecting");
 
   useEffect(() => {
     const doc = new Y.Doc();
+    // keeps a copy in the browser, so edits made offline survive a reload
+    const localCopy = new IndexeddbPersistence(`collab-board:${boardId}`, doc);
     const provider = new WebsocketProvider(SYNC_URL, boardId, doc);
 
+    provider.on("status", ({ status: next }) => {
+      if (next === "connected") setStatus("online");
+      else if (next === "disconnected") setStatus("offline");
+      // while retrying it flips between connecting and disconnected, keep showing offline
+      else setStatus((current) => (current === "offline" ? "offline" : "connecting"));
+    });
+
+    localCopy.on("synced", () => ensureDefaultColumns(doc));
     provider.on("sync", (synced) => {
       if (synced) ensureDefaultColumns(doc);
     });
@@ -34,11 +48,12 @@ export function useBoardConnection(boardId: string) {
     setConnection({ doc, awareness: provider.awareness });
     return () => {
       provider.destroy();
+      localCopy.destroy();
       doc.destroy();
     };
   }, [boardId]);
 
-  return connection;
+  return { connection, status };
 }
 
 export function useBoard(doc: Y.Doc): BoardState {

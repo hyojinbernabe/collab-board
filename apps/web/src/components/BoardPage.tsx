@@ -1,22 +1,29 @@
 import { useEffect, useState } from "react";
-import { useBoardConnection, useOthers, type BoardConnection } from "../sync";
+import { useBoardConnection, useOthers, type BoardConnection, type ConnectionStatus } from "../sync";
 import { loadUser, saveUser, type LocalUser } from "../user";
 import { Board } from "./Board";
 import { InlineEditor } from "./InlineEditor";
 
+const STATUS_TEXT: Record<ConnectionStatus, string> = {
+  connecting: "Connecting",
+  online: "Live",
+  offline: "Offline, changes are saved on this device",
+};
+
 export function BoardPage({ boardId }: { boardId: string }) {
-  const connection = useBoardConnection(boardId);
+  const { connection, status } = useBoardConnection(boardId);
 
   if (!connection) return <div className="page" />;
-  return <BoardScreen boardId={boardId} connection={connection} />;
+  return <BoardScreen boardId={boardId} status={status} connection={connection} />;
 }
 
 interface ScreenProps {
   boardId: string;
+  status: ConnectionStatus;
   connection: BoardConnection;
 }
 
-function BoardScreen({ boardId, connection }: ScreenProps) {
+function BoardScreen({ boardId, status, connection }: ScreenProps) {
   const [user, setUser] = useState<LocalUser>(loadUser);
   const [renaming, setRenaming] = useState(false);
   const others = useOthers(connection.awareness);
@@ -37,6 +44,7 @@ function BoardScreen({ boardId, connection }: ScreenProps) {
       <header className="topbar">
         <span className="topbar__home">Collab Board</span>
         <span className="topbar__board">{boardId}</span>
+        <span className={`status status--${status}`}>{STATUS_TEXT[status]}</span>
 
         <div className="topbar__spacer" />
 
