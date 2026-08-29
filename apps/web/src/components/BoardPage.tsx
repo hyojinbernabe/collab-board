@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { rememberBoard } from "../recentBoards";
 import { useBoardConnection, useOthers, type BoardConnection, type ConnectionStatus } from "../sync";
 import { loadUser, saveUser, type LocalUser } from "../user";
 import { Board } from "./Board";
@@ -12,6 +13,8 @@ const STATUS_TEXT: Record<ConnectionStatus, string> = {
 
 export function BoardPage({ boardId }: { boardId: string }) {
   const { connection, status } = useBoardConnection(boardId);
+
+  useEffect(() => rememberBoard(boardId), [boardId]);
 
   if (!connection) return <div className="page" />;
   return <BoardScreen boardId={boardId} status={status} connection={connection} />;
@@ -42,7 +45,9 @@ function BoardScreen({ boardId, status, connection }: ScreenProps) {
   return (
     <div className="page">
       <header className="topbar">
-        <span className="topbar__home">Collab Board</span>
+        <a href="/" className="topbar__home">
+          Collab Board
+        </a>
         <span className="topbar__board">{boardId}</span>
         <span className={`status status--${status}`}>{STATUS_TEXT[status]}</span>
 
