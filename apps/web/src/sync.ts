@@ -45,8 +45,16 @@ export function useBoardConnection(boardId: string) {
       if (synced) ensureDefaultColumns(doc);
     });
 
+    // a dead socket can take a while to notice on its own, so react to the browser right away
+    const goOffline = () => provider.disconnect();
+    const goOnline = () => provider.connect();
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+
     setConnection({ doc, awareness: provider.awareness });
     return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
       provider.destroy();
       localCopy.destroy();
       doc.destroy();
