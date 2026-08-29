@@ -71,9 +71,27 @@ function BoardScreen({ boardId, status, connection }: ScreenProps) {
             </button>
           )}
         </div>
+
+        <CopyLinkButton />
       </header>
 
       <Board doc={connection.doc} awareness={connection.awareness} others={others} />
     </div>
+  );
+}
+
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <button className="button" onClick={copy}>
+      {copied ? "Copied" : "Copy link"}
+    </button>
   );
 }
