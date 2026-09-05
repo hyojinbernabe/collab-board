@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/hyojinbernabe/collab-board/actions/workflows/ci.yml/badge.svg)
 
-A small Trello style board. Several people can edit the same board at once and see each other's cursors, and edits merge without conflcts. If your connection drops you can keep working. Your changes stay in the browser and sync when you're back online.
+A small Trello style board. Several people can edit the same board at once and see each other's cursors, and edits merge without conflicts. If your connection drops you can keep working. Your changes stay in the browser and sync when you're back online.
 
 ![Two browser windows editing the same board, each showing the other person's cursor](docs/two-windows.png)
 
