@@ -40,7 +40,8 @@ export function useBoardConnection(boardId: string) {
       else setStatus((current) => (current === "offline" ? "offline" : "connecting"));
     });
 
-    localCopy.on("synced", () => ensureDefaultColumns(doc));
+    // only set up the default columns once we know what the server has,
+    // otherwise a fresh browser would overwrite columns someone already renamed
     provider.on("sync", (synced) => {
       if (synced) ensureDefaultColumns(doc);
     });
