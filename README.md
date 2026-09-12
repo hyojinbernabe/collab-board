@@ -55,3 +55,16 @@ packages/shared  board data model, used by the web app and the tests
 - The server stores every update as a row in Postgres. After 100 updates, or when the last person leaves a board, it merges them into one snapshot row. The store sits behind a small interface, so the tests use an in-memory version and the Postgres version is tested against PGlite (Postgres compiled to WebAssembly).
 
 The integration test starts the real server in the test process, connects several Yjs clients, has them edit at the same time, takes one offline, makes conflicting changes on both sides, reconnects, and checks that every client ends up with the same board.
+
+## What I learned
+
+- CRDTs take care of merging, but you still have to shape the data around them. A Y.Array of cards per column looks like the obvious choice, but then a move is a delete plus an insert, and two people moving the same card at once end up with two copies. A position number avoids that.
+- Saving updates and compacting them in the background can lose data if the two steps run in the wrong order. Each room has a single write queue, so the snapshot always lands after the updates it already contains, and anything newer is appended after it.
+- The default columns can only be created after the client has synced with the server. Otherwise a fresh browser makes its own "To do" column, and that can overwrite one someone already renamed.
+
+## What I'd do next
+
+- Use Y.Text for card text so two people typing in the same card merge per character instead of the last save winning
+- Auth and private boards
+- Run more than one server instance (right now a board has to live on one server, because compaction assumes it's the only writer)
+- Touch support for drag and drop on phones
